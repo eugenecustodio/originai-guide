@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OriginAI Study Guide</title>
+  <meta name="description" content="How real-originai.com works, step by step, with every function linked to its code.">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    try { const t = localStorage.getItem("osg-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" type="button" aria-label="Open the sections menu" aria-expanded="false" aria-controls="sidebar" data-menu>&#9776;</button>
+    <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">O</span><span><strong>OriginAI Study Guide</strong><small>How real-originai.com works, with the code</small></span></a>
+    <form class="search" role="search" data-search>
+      <label class="visually-hidden" for="code-search">Search the code map</label>
+      <input id="code-search" type="search" placeholder="Search functions, files, topics…" autocomplete="off">
+    </form>
+    <button class="icon-btn" type="button" aria-label="Switch light or dark theme" data-theme-toggle>&#9681;</button>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Sections">
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#journey">Life of a scan</a></li>
+        <li><a href="#lifecycle">Job stages</a></li>
+        <li><a href="#api">The API</a></li>
+        <li><a href="#checks">Video checks and links</a></li>
+        <li><a href="#pipeline">GPU pipeline</a></li>
+        <li><a href="#result">Reading a result</a></li>
+        <li><a href="#detectors">Detectors</a></li>
+        <li><a href="#auto">Auto</a></li>
+        <li><a href="#infra">Hosting and deploys</a></li>
+        <li><a href="#security">Limits and safety</a></li>
+        <li><a href="#codemap">Code map</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ol>
+      <p class="sidebar-note">Code links are pinned to the versions live on October 18, 2026: website <code>2daaf09</code>, GPU worker <code>0453e98</code>.</p>
+    </nav>
+
+    <main id="main" tabindex="-1">
+      <!-- ============================================================ OVERVIEW -->
+      <section id="overview" class="section">
+        <p class="eyebrow">Start here</p>
+        <h1>How real-originai.com works</h1>
+        <p class="lead">OriginAI takes a video of a person, from a file or a social media link, and returns how likely it is that the face was swapped or altered by AI. This guide follows that video through the website, the API and the GPU, and every explanation has a <span class="chip-sample">Code</span> button that opens the exact lines in the repositories.</p>
+
+        <div class="cards three">
+          <div class="card"><h3>1. The page</h3><p>The Scan page (<code>frontend/pages/new-scanner.html</code>, run by <code>frontend/js/scanner.js</code>) checks the video, uploads it, and shows the result.</p></div>
+          <div class="card"><h3>2. The server</h3><p>One FastAPI program on Render (<code>backend/server.py</code>) serves the pages and the API, checks every video, and keeps the line for the GPU.</p></div>
+          <div class="card"><h3>3. The GPU</h3><p>A rented RTX 5090 on Vast.ai runs the detectors (<code>originai-vast/model_server</code>) and sends back the scores and evidence pictures.</p></div>
+        </div>
+
+        <h2>The four detectors and Auto</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Detector</th><th>On the Scan page</th><th>Learned from</th><th>Threshold</th></tr></thead>
+            <tbody>
+              <tr><td>Veni HQ</td><td>Clear and sharp</td><td>FaceForensics++ C23 (light compression)</td><td>0.5248</td></tr>
+              <tr><td>Veni LQ</td><td>Blurry, blocky or re-shared</td><td>FaceForensics++ C40 (heavy compression)</td><td>0.4893</td></tr>
+              <tr><td>Vidi</td><td>Almost too perfect</td><td>DFD-FCG (Han et al., CVPR 2025), trained by its authors on FaceForensics++ C23</td><td>0.5</td></tr>
+              <tr><td>Vici</td><td>Dark, shaky or noisy</td><td>DeeperForensics-1.0</td><td>0.8322</td></tr>
+              <tr><td>Auto</td><td>Recommended</td><td>Picks one of the four from how the video looks; never Veni HQ</td><td>The pick's</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The thresholds and the rest of each detector's settings are in the registry the GPU reads <button class="code-chip" data-code="models-json"></button>.</p>
+
+        <h2>Where the code lives</h2>
+        <div class="cards two">
+          <div class="card">
+            <h3>originai-website <span class="badge">private</span></h3>
+            <ul class="tree">
+              <li><code>backend/server.py</code> the website and API</li>
+              <li><code>backend/link_sources.py</code> links through yt-dlp</li>
+              <li><code>backend/video_quality.py</code> Auto</li>
+              <li><code>backend/tests/</code> 156 tests</li>
+              <li><code>frontend/</code> pages, <code>js/scanner.js</code>, CSS, assets</li>
+              <li><code>build/build.mjs</code> the obfuscation build</li>
+              <li><code>render.yaml</code>, <code>.github/workflows/</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>originai-vast <span class="badge public">public</span></h3>
+            <ul class="tree">
+              <li><code>model_server/app.py</code> the worker's API</li>
+              <li><code>model_server/detector.py</code> face pipeline and the detection network</li>
+              <li><code>model_server/dfd_fcg.py</code> Vidi</li>
+              <li><code>model_server/gpu_mtcnn.py</code> face detection</li>
+              <li><code>model_server/fetch_weights.py</code> weights from Backblaze</li>
+              <li><code>model_server/models.json</code> the detector registry</li>
+              <li><code>worker.py</code>, <code>Dockerfile</code>, <code>onstart.sh</code></li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">This is the public edition. <code>originai-website</code> is private, so its functions are listed with their file, lines and description, without their code. The code from <code>originai-vast</code> is public and shown in full.</p>
+      </section>
+
+      <!-- ============================================================ ARCHITECTURE -->
+      <section id="architecture" class="section">
+        <p class="eyebrow">The big picture</p>
+        <h2>Architecture: who talks to whom</h2>
+        <p class="lead">The browser only ever talks to the web server on Render. The web server is the only part that talks to Vast.ai, because every Vast call needs the account's API key. Click a box to see what it does and its code.</p>
+        <div data-widget="architecture"></div>
+        <ul class="why">
+          <li><strong>Cost:</strong> the GPU is billed per second only while it runs; the web server is free. Videos are checked on the free server first, so a bad file never costs GPU time.</li>
+          <li><strong>Security:</strong> the Vast key stays on Render and the Backblaze key on Vast; the browser holds neither.</li>
+          <li><strong>Scaling:</strong> the server's line feeds the GPU 3 scans at a time, and Vast stops the GPU when nobody scans.</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ JOURNEY -->
+      <section id="journey" class="section">
+        <p class="eyebrow">Step by step</p>
+        <h2>The life of one scan</h2>
+        <p class="lead">Follow a video from the visitor's click to the result. Choose a file upload or a link, then step through; the diagram lights up the part that is working, and each step shows its code.</p>
+        <div data-widget="journey"></div>
+      </section>
+
+      <!-- ============================================================ LIFECYCLE -->
+      <section id="lifecycle" class="section">
+        <p class="eyebrow">Statuses</p>
+        <h2>Job stages: what the API reports</h2>
+        <p class="lead">A check moves through at most four stages, <code>fetching</code>, <code>queued</code>, <code>analyzing</code> and <code>completed</code>, and can end early as refused, <code>canceled</code> or <code>failed</code>. Uploads skip fetching. Cancel works only before the GPU has the video. Click a stage.</p>
+        <div data-widget="lifecycle"></div>
+      </section>
+
+      <!-- ============================================================ API -->
+      <section id="api" class="section">
+        <p class="eyebrow">For programs</p>
+        <h2>The API</h2>
+        <p class="lead">The API is the same FastAPI program that serves the pages; the Scan page is just one client. It is free and needs no key. Because a GPU check takes seconds to minutes, it works as a job you check on: start it, get an id at once (202), then ask for it until it is done.</p>
+        <p>Every endpoint is a decorated function in <code>backend/server.py</code>: the decorator (<code>@app.get</code>, <code>@app.post</code>, <code>@app.api_route</code>) names the address and method. Pick one to see its real answer and its code. Answers marked <em>live, October 18</em> were fetched from the site; the others were recorded from real scans on October 9, 2026.</p>
+        <div data-widget="api"></div>
+        <h3>Errors</h3>
+        <p>Every error is JSON <code>{"detail": "&lt;sentence for the visitor&gt;", "code": "&lt;code&gt;"}</code> <button class="code-chip" data-code="api-errors"></button> <button class="code-chip" data-code="error-handlers"></button>. A check that fails on the GPU still answers 200 for the job, with <code>status: "failed"</code>, a <code>reason</code> and an <code>error</code> sentence.</p>
+      </section>
+
+      <!-- ============================================================ CHECKS AND LINKS -->
+      <section id="checks" class="section">
+        <p class="eyebrow">Before the GPU</p>
+        <h2>Video checks and social media links</h2>
+        <p class="lead">Every video, uploaded or linked, must pass the same rules before it costs a GPU scan. The page checks what it can first; the server always checks again by opening the file with PyAV (FFmpeg for Python), because a page can be bypassed.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Rule</th><th>Limit</th><th>Error code</th><th>Code</th></tr></thead>
+            <tbody>
+              <tr><td>Format</td><td>MP4, MOV, WebM or MKV</td><td><code>bad_format</code></td><td><button class="code-chip" data-code="upload-limits"></button></td></tr>
+              <tr><td>A real video</td><td>One frame must decode</td><td><code>not_video</code>, <code>empty</code></td><td><button class="code-chip" data-code="read-video-file"></button></td></tr>
+              <tr><td>Length</td><td>10 seconds to 2 minutes</td><td><code>too_short</code>, <code>too_long</code></td><td><button class="code-chip" data-code="check-rules"></button></td></tr>
+              <tr><td>Resolution</td><td>Short side 360 to 1080 px; at most 3 million pixels per frame</td><td><code>resolution_low</code>, <code>resolution_high</code></td><td><button class="code-chip" data-code="check-rules"></button></td></tr>
+              <tr><td>File size</td><td>Up to 250 MB</td><td><code>too_large</code></td><td><button class="code-chip" data-code="request-guard"></button></td></tr>
+              <tr><td>Readable length</td><td>The length must be readable</td><td><code>not_video</code></td><td><button class="code-chip" data-code="probe-upload"></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>In the browser, the same rules run in <button class="code-chip" data-code="js-select-file"></button> using <button class="code-chip" data-code="js-read-metadata"></button>. Files a browser can't play (for example MPEG-4 Part 2) are left to the server.</p>
+
+        <h3>Links, through yt-dlp</h3>
+        <ol class="steps">
+          <li><strong>Accept the link safely.</strong> Only hosts of a switched-on platform; no IP addresses, usernames in links or odd ports. <button class="code-chip" data-code="platforms"></button> <button class="code-chip" data-code="match-platform"></button></li>
+          <li><strong>Follow share links.</strong> One hop at a time, each kept on the platform. <button class="code-chip" data-code="resolve-tiktok"></button></li>
+          <li><strong>Look it up.</strong> yt-dlp reads title, length and quality without downloading; only the platform's own extractors may run. <button class="code-chip" data-code="ls-inspect"></button> <button class="code-chip" data-code="ydl-options"></button></li>
+          <li><strong>Download.</strong> The sharpest version from 360p to 1080p, H.264/H.265 first, into <code>backend/outputs/vast_uploads/</code>; stopped past 250 MB; checked with PyAV. <button class="code-chip" data-code="ls-rank-formats"></button> <button class="code-chip" data-code="ls-download"></button> <button class="code-chip" data-code="ls-fetch"></button></li>
+          <li><strong>Explain failures.</strong> yt-dlp's errors become codes such as <code>private</code>, <code>blocked</code> or <code>fetch_failed</code>. <button class="code-chip" data-code="explain-error"></button></li>
+        </ol>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Platform</th><th>From the live server, October 18, 2026</th></tr></thead>
+            <tbody>
+              <tr><td>TikTok, Facebook, X</td><td>Work (4 of 4 sample links each)</td></tr>
+              <tr><td>Reddit</td><td>Blocked since October 13: Reddit refuses Render's server address</td></tr>
+              <tr><td>YouTube, Instagram, Vimeo, Dailymotion</td><td>Switched off (need a login or refuse cloud servers)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A GitHub Action checks 16 sample links from the live server twice a day <button class="code-chip" data-code="link-health"></button>.</p>
+      </section>
+
+      <!-- ============================================================ PIPELINE -->
+      <section id="pipeline" class="section">
+        <p class="eyebrow">On the GPU</p>
+        <h2>The detection pipeline</h2>
+        <p class="lead">Every video goes through the thesis's frozen preprocessing (<code>preprocessing_v001</code>), then every face frame is scored in clips at the spacing the model was trained on. Click a step for its code. The whole run is one function <button class="code-chip" data-code="analyze-main"></button>.</p>
+        <div data-widget="pipeline"></div>
+
+        <h3>Try it: interleaved phases</h3>
+        <p>The model reads 16 frames spaced as in training (0.34 s for Veni, 0.345 s for Vici, 0.33 s with 10-frame clips for Vidi). To still use every frame, the video is split into k interleaved phases, k = round(spacing &times; fps), using Python's rounding <button class="code-chip" data-code="phase-clips"></button>.</p>
+        <div data-widget="phases"></div>
+
+        <h3>The decision</h3>
+        <div class="formula">p = sigmoid( mean(clip logits) / T ) &nbsp;&nbsp;&rarr;&nbsp;&nbsp; Likely Deepfake if p &ge; threshold</div>
+        <p>T (temperature) and the threshold come from each model's validation run: temperature scaling, then the threshold that maximizes Youden's J. <button class="code-chip" data-code="readout"></button></p>
+
+        <h3>How Vidi (DFD-FCG) differs</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Veni HQ, Veni LQ, Vici</th><th>Vidi</th></tr></thead>
+            <tbody>
+              <tr><td>Network</td><td>The study's video network, with a linear head</td><td>Frozen CLIP ViT-L/14 with lips/skin/eyes/nose adapters and a temporal branch, three heads <button class="code-chip" data-code="dfd-model"></button></td></tr>
+              <tr><td>Clip</td><td>16 frames</td><td>10 frames over 3 seconds</td></tr>
+              <tr><td>Video score</td><td>Mean clip logit, temperature, sigmoid</td><td>Mean of clip probabilities</td></tr>
+              <tr><td>Threshold</td><td>From our validation</td><td>The authors' 0.5, no calibration</td></tr>
+              <tr><td>Second check</td><td>Thesis protocol, 3 clips <button class="code-chip" data-code="eval-anchors"></button></td><td>One clip per 3 seconds, up to 100 <button class="code-chip" data-code="dfd-protocol"></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Up to 3 scans share the GPU at once; one that runs out of memory is re-run alone. <button class="code-chip" data-code="scan-gate"></button> <button class="code-chip" data-code="analyze-gate"></button></p>
+      </section>
+
+      <!-- ============================================================ RESULT -->
+      <section id="result" class="section">
+        <p class="eyebrow">The answer</p>
+        <h2>Reading a result</h2>
+        <p class="lead">There are only two answers, Likely Deepfake or Likely Real. Because each detector has its own line (Vidi 0.5, Vici 0.832), the page shows "how sure" counted from the line: 50% at the line, 100% at the far end. Try it.</p>
+        <div data-widget="howsure"></div>
+        <h3>The result card, part by part</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>On the card</th><th>From the job</th><th>Code</th></tr></thead>
+            <tbody>
+              <tr><td>Verdict and subtitle</td><td><code>pred</code>, how far <code>prob_fake</code> is past the line</td><td><button class="code-chip" data-code="js-how-sure"></button></td></tr>
+              <tr><td>N% sure and the meter</td><td><code>prob_fake</code>, <code>threshold</code></td><td><button class="code-chip" data-code="js-how-sure"></button></td></tr>
+              <tr><td>Auto note</td><td><code>auto.reason</code></td><td><button class="code-chip" data-code="js-render-result"></button></td></tr>
+              <tr><td>Checked (frames, stretch of video)</td><td><code>coverage</code></td><td><button class="code-chip" data-code="js-render-result"></button></td></tr>
+              <tr><td>Second check</td><td><code>protocol.pred</code></td><td><button class="code-chip" data-code="eval-anchors"></button></td></tr>
+              <tr><td>Evidence pictures</td><td><code>heatmaps</code> (URLs to <code>/media</code>)</td><td><button class="code-chip" data-code="store-heatmaps"></button></td></tr>
+              <tr><td>Failure sentence</td><td><code>reason</code></td><td><button class="code-chip" data-code="js-failure-messages"></button></td></tr>
+              <tr><td>The card's HTML</td><td>&ndash;</td><td><button class="code-chip" data-code="html-result"></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The main answer scores every face frame; the second check repeats the thesis evaluation on a few clips, so a result can be compared like for like with the paper. Results expire one hour after the check finishes <button class="code-chip" data-code="public-job"></button>.</p>
+      </section>
+
+      <!-- ============================================================ DETECTORS -->
+      <section id="detectors" class="section">
+        <p class="eyebrow">The models</p>
+        <h2>The detectors</h2>
+        <p class="lead">Veni HQ, Veni LQ and Vici are detectors trained in the study, one per collection; Vidi is DFD-FCG, a published model from another research team.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Detector</th><th>Model</th><th>Trained on</th><th>T</th><th>Threshold</th><th>Spacing</th></tr></thead>
+            <tbody>
+              <tr><td>Veni HQ</td><td>Trained in the study</td><td>FaceForensics++ C23 (seed 3109)</td><td>1.992</td><td>0.5248</td><td>0.34 s</td></tr>
+              <tr><td>Veni LQ</td><td>Trained in the study</td><td>FaceForensics++ C40 (seed 1701)</td><td>2.559</td><td>0.4893</td><td>0.34 s</td></tr>
+              <tr><td>Vici</td><td>Trained in the study</td><td>DeeperForensics-1.0 (seed 2203)</td><td>1.396</td><td>0.8322</td><td>0.345 s</td></tr>
+              <tr><td>Vidi</td><td>DFD-FCG</td><td>FaceForensics++ C23, by its authors</td><td>1</td><td>0.5</td><td>0.33 s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The networks: <button class="code-chip" data-code="detector-network"></button> <button class="code-chip" data-code="dfd-model"></button>. Each worker downloads the checkpoints from Backblaze and checks every SHA-1 <button class="code-chip" data-code="fetch-weights"></button>.</p>
+        <p><strong>Sample clips</strong> follow a rule: a detector is never offered a clip from the collection it learned from. The page's table still treats Vidi as a Celeb-DF model <button class="code-chip" data-code="js-samples"></button> <button class="code-chip" data-code="js-use-sample"></button>.</p>
+      </section>
+
+      <!-- ============================================================ AUTO -->
+      <section id="auto" class="section">
+        <p class="eyebrow">Picking a detector</p>
+        <h2>Auto</h2>
+        <p class="lead">Auto measures a few frames and asks six questions in order; the first "yes" picks the detector. It never picks Veni HQ, because a clean video can't show whether a fake is a polished one. The cut-offs are hand-set and were not evaluated in the study. Move the sliders to see what it would pick.</p>
+        <div data-widget="auto"></div>
+        <p>The same rules exist twice and must stay equal: on the server <button class="code-chip" data-code="vq-rules"></button> <button class="code-chip" data-code="vq-choose"></button> and in the page <button class="code-chip" data-code="js-auto-rules"></button> <button class="code-chip" data-code="js-auto-measure"></button>. The page measures files it can play; the server measures links and files the browser can't read <button class="code-chip" data-code="server-auto"></button>.</p>
+      </section>
+
+      <!-- ============================================================ INFRA -->
+      <section id="infra" class="section">
+        <p class="eyebrow">Running it</p>
+        <h2>Hosting and deploys</h2>
+        <p class="lead">A code change goes live by pushing to GitHub; nothing is copied to a server by hand. Render rebuilds the site, obfuscates the page scripts, checks its health and switches over in about 2 minutes.</p>
+        <div data-widget="deploy"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Service</th><th>What it does for OriginAI</th><th>Plan</th></tr></thead>
+            <tbody>
+              <tr><td>GitHub</td><td>Both repositories; builds the worker image; runs the link health check</td><td>Free</td></tr>
+              <tr><td>Render</td><td>Hosts the website and API (service <code>originai</code>, Singapore)</td><td>Free: 0.1 CPU, about 512 MB, sleeps after ~15 idle minutes</td></tr>
+              <tr><td>Vast.ai</td><td>Rents an RTX 5090 when scans need it</td><td>About $0.46&ndash;0.50 per hour while a GPU runs</td></tr>
+              <tr><td>Backblaze B2</td><td>Private bucket with the checkpoints</td><td>A few cents a month</td></tr>
+              <tr><td>Namecheap, Cloudflare</td><td>The domain; Render's edge network</td><td>Domain renewed yearly</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Serving the site and the obfuscation build</h3>
+        <p>Render sets <code>ORIGINAI_FRONTEND_DIR=../frontend-dist</code>, so the server serves the built copy and never the readable <code>frontend/</code> <button class="code-chip" data-code="frontend-dir"></button> <button class="code-chip" data-code="mount-static"></button>. The build obfuscates page scripts, minifies CSS and HTML, leaves out internal notes, and versions every link with a content hash <button class="code-chip" data-code="build-rules"></button> <button class="code-chip" data-code="build-main"></button>. Caching and security headers are set on every response <button class="code-chip" data-code="headers"></button>.</p>
+        <h3>The GPU side</h3>
+        <p><strong>Endpoint</strong> <code>originai-detectors</code> holds the scaling rules (<code>min_load</code> 0 = no GPU when idle; 100 = one always on, about $12 a day). The <strong>worker group</strong> says which machines may be rented; the <strong>template</strong> says which image runs. A new machine downloads a 3.4 GB image and about 2.3 GB of weights before it can scan: a cold start of 15 to 30 minutes. <button class="code-chip" data-code="dockerfile"></button> <button class="code-chip" data-code="onstart"></button> <button class="code-chip" data-code="build-image"></button></p>
+      </section>
+
+      <!-- ============================================================ SECURITY -->
+      <section id="security" class="section">
+        <p class="eyebrow">Keeping it safe</p>
+        <h2>Limits and safety</h2>
+        <ul class="checklist">
+          <li><strong>The line:</strong> 3 scans on the GPU, up to 50 waiting; beyond that <code>busy</code> (429). <button class="code-chip" data-code="capacity-problem"></button></li>
+          <li><strong>Link requests:</strong> 300 per visitor every 10 minutes. <button class="code-chip" data-code="link-limit"></button></li>
+          <li><strong>Size caps</strong> checked from the request header before reading: 251 MB for uploads, 64 KB for JSON. <button class="code-chip" data-code="request-guard"></button></li>
+          <li><strong>Strict file names:</strong> uploads, jobs, pictures and pages must match exact patterns, so no request reaches another file. <button class="code-chip" data-code="name-patterns"></button></li>
+          <li><strong>The visitor's address</strong> is the third entry from the right of <code>X-Forwarded-For</code> on Render; a forged entry is ignored. <button class="code-chip" data-code="client-ip"></button></li>
+          <li><strong>No CORS:</strong> other websites can't call the API from a visitor's browser. <button class="code-chip" data-code="cors"></button></li>
+          <li><strong>Link safety:</strong> platform hosts only, every redirect re-checked, yt-dlp limited to the platform's extractors. <button class="code-chip" data-code="match-platform"></button></li>
+          <li><strong>Short-lived files:</strong> uploads deleted when the check ends; results after one hour. <button class="code-chip" data-code="run-vast-job"></button> <button class="code-chip" data-code="save-state"></button></li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ CODE MAP -->
+      <section id="codemap" class="section">
+        <p class="eyebrow">Everything in one place</p>
+        <h2>Code map</h2>
+        <p class="lead">Every function this guide refers to, with its file, its lines and the code itself. Search by name, file or topic.</p>
+        <div data-widget="codemap"></div>
+      </section>
+
+      <!-- ============================================================ GLOSSARY -->
+      <section id="glossary" class="section">
+        <p class="eyebrow">Words</p>
+        <h2>Glossary</h2>
+        <dl class="glossary">
+          <dt>Deepfake</dt><dd>A real person's face that AI has swapped or altered. Fully generated video and cloned voices are not included.</dd>
+          <dt>Logit</dt><dd>The model's raw score for a clip before it becomes a probability.</dd>
+          <dt>Temperature scaling</dt><dd>Dividing logits by T, fitted on validation videos, so scores match how often the model is right.</dd>
+          <dt>Threshold (the line)</dt><dd>The score at which the answer flips to Likely Deepfake.</dd>
+          <dt>Youden's J</dt><dd>True-positive rate minus false-positive rate; the threshold that maximizes it balances catching fakes against false alarms.</dd>
+          <dt>ROC-AUC</dt><dd>How well scores separate real from fake over every threshold: 1.0 perfect, 0.5 a coin toss.</dd>
+          <dt>False positive / negative</dt><dd>A real video called a deepfake / a deepfake called real.</dd>
+          <dt>Cross-dataset generalization</dt><dd>How a detector does on a collection it never learned from (AUC about 0.997 to 0.874 in the thesis).</dd>
+          <dt>Frame spacing, clip, phases</dt><dd>The time between frames the model reads; the frames scored together; the offset sequences that let every frame be scored at the trained spacing.</dd>
+          <dt>MTCNN, alignment, tracking</dt><dd>Finding the face and its landmarks; warping it to a standard template; following one person through the video.</dd>
+          <dt>Evidence map</dt><dd>Which face regions pushed the score up; for Veni HQ, Veni LQ and Vici it equals Grad-CAM at the last layer.</dd>
+          <dt>Asynchronous job, polling</dt><dd>Start a job, get an id at once, then ask for it until it is done.</dd>
+          <dt>Serverless GPU, cold start</dt><dd>A GPU rented only while work needs it; the wait while a new one is rented and loaded.</dd>
+          <dt>CORS, SSRF</dt><dd>The browser rule that stops other sites calling the API; tricking a server into fetching internal addresses (blocked for links).</dd>
+          <dt>Obfuscation</dt><dd>Rewriting the page scripts so they are hard to read; it deters copying but cannot make browser code secret.</dd>
+          <dt>yt-dlp, PyAV</dt><dd>The open-source tool that reads videos from links; Python bindings for FFmpeg that open and check videos.</dd>
+        </dl>
+      </section>
+
+      <footer class="footer">
+        <p>Built for the OriginAI thesis defense. Public edition: the code shown is from <code>originai-vast@0453e98</code>; functions of the private <code>originai-website@2daaf09</code> are listed by file and lines only.</p>
+      </footer>
+    </main>
+  </div>
+
+  <div class="scrim" data-scrim hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <div>
+        <p class="drawer-path" data-drawer-path></p>
+        <h2 id="drawer-title" data-drawer-title>Code</h2>
+      </div>
+      <button class="icon-btn" type="button" aria-label="Close the code viewer" data-drawer-close>&times;</button>
+    </div>
+    <p class="drawer-desc" data-drawer-desc></p>
+    <div class="drawer-actions">
+      <a class="btn" data-drawer-link target="_blank" rel="noopener">Open on GitHub</a>
+      <button class="btn ghost" type="button" data-drawer-copy>Copy code</button>
+      <span class="drawer-private" data-drawer-private hidden>Private repository.</span>
+    </div>
+    <div class="code-view" data-drawer-code></div>
+  </aside>
+
+  <script src="js/data.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
