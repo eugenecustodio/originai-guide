@@ -99,7 +99,7 @@
             </ul>
           </div>
         </div>
-        <p class="note">This is the public edition. <code>originai-website</code> is private, so its functions are listed with their file, lines and description, without their code. The code from <code>originai-vast</code> is public and shown in full.</p>
+        <p class="note">The code from both repositories is shown in this guide. <code>originai-website</code> is a private repository, so its GitHub links aren't available here; its code is shown as it was at commit <code>2daaf09</code>. <code>originai-vast</code> is public, and its links open the exact lines.</p>
       </section>
 
       <!-- ============================================================ ARCHITECTURE -->
@@ -303,6 +303,7 @@
           <li><strong>Strict file names:</strong> uploads, jobs, pictures and pages must match exact patterns, so no request reaches another file. <button class="code-chip" data-code="name-patterns"></button></li>
           <li><strong>The visitor's address</strong> is the third entry from the right of <code>X-Forwarded-For</code> on Render; a forged entry is ignored. <button class="code-chip" data-code="client-ip"></button></li>
           <li><strong>No CORS:</strong> other websites can't call the API from a visitor's browser. <button class="code-chip" data-code="cors"></button></li>
+          <li><strong>Hidden admin:</strong> admin endpoints answer 404 without the right key. <button class="code-chip" data-code="admin"></button></li>
           <li><strong>Link safety:</strong> platform hosts only, every redirect re-checked, yt-dlp limited to the platform's extractors. <button class="code-chip" data-code="match-platform"></button></li>
           <li><strong>Short-lived files:</strong> uploads deleted when the check ends; results after one hour. <button class="code-chip" data-code="run-vast-job"></button> <button class="code-chip" data-code="save-state"></button></li>
         </ul>
@@ -341,7 +342,7 @@
       </section>
 
       <footer class="footer">
-        <p>Built for the OriginAI thesis defense. Public edition: the code shown is from <code>originai-vast@0453e98</code>; functions of the private <code>originai-website@2daaf09</code> are listed by file and lines only.</p>
+        <p>Built for the OriginAI thesis defense. Public edition: the code shown is from <code>originai-website@2daaf09</code> (a private repository) and <code>originai-vast@0453e98</code>.</p>
       </footer>
     </main>
   </div>

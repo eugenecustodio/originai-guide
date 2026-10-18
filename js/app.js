@@ -124,7 +124,7 @@
     },
     html: {
       rules: [
-        ["com", /<!--[\s\S]*?-->/],
+        ["com", /<!-{2}[\s\S]*?-{2}>/], // written as -{2} so the script can also be placed inline in a page
         ["tag", /<\/?[A-Za-z][\w-]*|\/?>/],
         ["str", /(?<==)(?:"[^"]*"|'[^']*')/],
         ["attr", /[A-Za-z_:@][\w:.-]*(?==)/],
@@ -295,7 +295,8 @@
     $("[data-drawer-path]", drawer).textContent = `${entry.repo} / ${entry.path}, lines ${lineRange(entry)}`;
     $("[data-drawer-title]", drawer).textContent = entry.title;
     $("[data-drawer-desc]", drawer).textContent = entry.desc || "";
-    // The public edition carries no code from private repositories: only the file, the lines and the description
+    // A public edition may leave out the code of a private repository (only the file, lines and description),
+    // and never links into one
     const hasCode = typeof entry.code === "string";
     const link = $("[data-drawer-link]", drawer);
     link.hidden = !entry.url;
@@ -303,10 +304,14 @@
     link.textContent = `Open lines ${lineRange(entry)} on GitHub`;
     $("[data-drawer-copy]", drawer).hidden = !hasCode;
     const note = $("[data-drawer-private]", drawer);
+    const repoInfo = Object.values(DATA.repos || {}).find((repo) => repo.name === entry.repo);
+    const commit = repoInfo ? repoInfo.sha.slice(0, 7) : "";
     note.hidden = !entry.private;
-    note.textContent = hasCode
-      ? "Private repository: the GitHub link needs collaborator access."
-      : "Private repository: its code isn't included in this public edition.";
+    note.textContent = !hasCode
+      ? "Private repository: its code isn't included in this public edition."
+      : entry.url
+        ? "Private repository: the GitHub link needs collaborator access."
+        : `From the private ${entry.repo} repository, as it was at commit ${commit}. It has no public GitHub link.`;
     const view = $("[data-drawer-code]", drawer);
     view.innerHTML = hasCode
       ? codeLinesHtml(entry.code, entry.lang, entry.start)
